@@ -1,3 +1,4 @@
+from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LinearRegression
 import os
 import pandas as pd
@@ -6,22 +7,117 @@ import matplotlib.pyplot as plt
 import sys
 from collections import Counter
 np.seterr(divide='ignore', invalid='ignore')
-
-
 sys.path.append(os.path.abspath(".."))
 
 import config
-import preparation.utilities as utilities
-
 
 train = pd.read_csv(config.trainset_path)
 test = pd.read_csv(config.testset_path)
-IDtest = test["PassengerId"]
 
 
-Outliers_to_drop = utilities.detect_outliers(train, 2, ["Age", "SibSp", "Parch", "Fare"])
+def combineDataSet(train, test):
+    """
+    pass
 
-train = train.drop(Outliers_to_drop, axis=0).reset_index(drop=True)
+    """
+    
+    
+    dataset = pd.concat(objs=[train, test], axis=0).reset_index(drop=True)
+
+    return dataset
+
+
+df = combineDataSet(train, test)
+
+# check dataframe datatype & describe
+print(df.dtypes)
+print(df.describe())
+
+###############################
+# check data NA
+
+# Fill empty and NaNs values with NaN
+df = df.fillna(np.nan)
+
+# Check for Null values
+print(df.isnull().sum())
+
+
+###############################
+#Filling missing value
+
+#Age
+
+index_NaN_age = list(df["Age"][df["Age"].isnull()].index)
+
+for i in index_NaN_age:
+    age_med = df["Age"].median()
+    age_pred = df["Age"][((df['SibSp'] == df.iloc[i]["SibSp"]) & (
+        df['Parch'] == df.iloc[i]["Parch"]) & (df['Pclass'] == df.iloc[i]["Pclass"]))].median()
+    if not np.isnan(age_pred):
+        df['Age'].iloc[i] = age_pred
+    else:
+        df['Age'].iloc[i] = age_med
+
+
+# Cabin 
+
+df["Cabin"] = pd.Series([i[0] if not pd.isnull(i) else 'X' for i in df['Cabin']])
+
+
+
+
+
+# Create a family size descriptor from SibSp and Parch
+df["Fsize"] = df["SibSp"] + df["Parch"] + 1
+
+
+
+#dummie
+df = pd.get_dummies(df, columns=["Ticket"], prefix="T")
+    # Create categorical values for Pclass
+df["Pclass"] = df["Pclass"].astype("category")
+df = pd.get_dummies(df, columns=["Pclass"], prefix="Pc")
+    # Drop useless variables
+df.drop(labels=["PassengerId"], axis=1, inplace=True)
+
+
+# ref:https://www.kaggle.com/yassineghouzam/titanic-top-4-with-ensemble-modeling
+
+
+sys.exit()
+
+
+
+
+X = dataset.drop(['PassengerId', 'Cabin', 'Ticket',
+                  'Fare', 'Parch', 'SibSp'], axis=1)
+y = X.Survived                       # vector of labels (dependent variable)
+# remove the dependent variable from the dataframe X
+X = X.drop(['Survived'], axis=1)
+
+
+# ----------------- Encoding categorical data -------------------------
+
+# encode "Sex"
+labelEncoder_X = LabelEncoder()
+X.Sex = labelEncoder_X.fit_transform(X.Sex)
+
+
+# encode "Embarked"
+
+# number of null values in embarked:
+print('Number of null values in Embarked:', sum(X.Embarked.isnull()))
+
+# fill the two values with one of the options (S, C or Q)
+row_index = X.Embarked.isnull()
+X.loc[row_index, 'Embarked'] = 'S'
+
+Embarked = pd.get_dummies(X.Embarked, prefix='Embarked')
+X = X.drop(['Embarked'], axis=1)
+X = pd.concat([X, Embarked], axis=1)
+# we should drop one of the columns
+X = X.drop(['Embarked_S'], axis=1)
 
 
 
