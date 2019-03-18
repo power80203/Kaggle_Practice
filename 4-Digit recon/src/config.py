@@ -1,35 +1,23 @@
+#!/usr/bin/env python3
+
 #########################################################
 #讀取檔案
 #########################################################
 
 #csv file
 
+from pathlib import Path
 import csv
 import os
 import sys
+sys.path.append(os.path.abspath("."))
 
-a = os.path.abspath(__file__)
-a = a.split("/")
-str_line = '/'
-a = str_line.join(a[0:-2])
+p = Path(__file__).parents[1]
 
 
+testset_path = r"{}/data/raw/test.csv".format(p)
+trainset_path = r"{}/data/raw/train.csv".format(p)
 
-testset_path = r"{}/data/raw/test.csv".format(a)
-trainset_path = r"{}/data/raw/train.csv".format(a)
-
-
-
-if __name__ == "__main__":
-    print(testset_path)
-    # # 開啟 CSV 檔案
-    # f =  open("%stest.csv"%abs_file_path,'r')
-
-
-    # # 以迴圈輸出每一列
-    # for row in csv.reader(f):
-    #     print(row)
-    # f.close();
 
 
 """
