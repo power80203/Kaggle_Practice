@@ -9,6 +9,9 @@ print(sys.path)
 import config
 import data.utilities as u
 from visualization import scatterchart as sc
+from visualization import barchart as bar
+
+
 
 #########################################################
 #Loading Data#
@@ -63,4 +66,5 @@ def sex_existed(df):
     plt.show()
 
 if __name__ == "__main__":
-    sex_existed(df)
+    # sex_existed(df)
+    bar.barchart(df, "Age", "Sex")
