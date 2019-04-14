@@ -1,97 +1,157 @@
-from collections import Counter
+#!/usr/bin/env python3
+
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-import datareader 
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, ExtraTreesClassifier, VotingClassifier
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.svm import SVC
-from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFold, learning_curve
+import sys
+
+sys.path.append(os.path.abspath(".."))
+
+import config
+import data.datareader as datareader
+import data.utilities as u_data
 
 
-df_train , df_test = datareader.df_train, datareader.df_test
-
-
-# detect outliers from Age, SibSp , Parch and Fare
-Outliers_to_drop = detect_outliers(train, 2, ["Age", "SibSp", "Parch", "Fare"])
-
-
-
-
-def detect_outliers(df, n, features):
+def featureEngineeringMain():
     """
-    Takes a dataframe df of features and returns a list of the indices
-    corresponding to the observations containing more than n outliers according
-    to the Tukey method.
+    1. 針對不同參數的不同的遺失值做處理
+    1.a 畫圖確認要怎麼處理
+    2. 製作ML所需的指標
+    3. 吐出資料集到data/interi
+
     """
-    outlier_indices = []
 
-    # iterate over features(columns)
-    for col in features:
-        # 1st quartile (25%)
-        Q1 = np.percentile(df[col], 25)
-        # 3rd quartile (75%)
-        Q3 = np.percentile(df[col], 75)
-        # Interquartile range (IQR)
-        IQR = Q3 - Q1
+    # import data from datareader
+    df2, train, test,train_len2, IDtest = datareader.dataReaderMain()
 
-        # outlier step
-        outlier_step = 1.5 * IQR
+    df = df2
 
-        # Determine a list of indices of outliers for feature col
-        outlier_list_col = df[(df[col] < Q1 - outlier_step)
-                              | (df[col] > Q3 + outlier_step)].index
+    train_len = train_len2
 
-        # append the found outlier indices for col to the list of outlier indices
-        outlier_indices.extend(outlier_list_col)
+    #########################################################
+    # dealing with missgin data
+    #########################################################
 
-    # select observations containing more than 2 outliers
-    outlier_indices = Counter(outlier_indices)
-    multiple_outliers = list(k for k, v in outlier_indices.items() if v > n)
+    print("######################################")
+    print("start dealing with missing data")
+    print("######################################")
+        
+    #########################################################
+    # Age
 
-    return multiple_outliers
+    """
+    a important skill to fill out those NA value 
+    is using other X vars
+
+    """
+    # age 是 nan的 index
+    index_NaN_age = list(df["Age"][df["Age"].isnull()].index)
+
+    # 把所有 Nan 作不同處理
+    # 如果可以用Sibsp, parch, pclass 對到的話就用 對到的欄位去做中位數; 反之則用 全部的中位數去插捕
+    for i in index_NaN_age: 
+        age_med = df["Age"].median() #age_med中位數
+        age_pred = df["Age"][((df['SibSp'] == df.iloc[i]["SibSp"]) & (
+            df['Parch'] == df.iloc[i]["Parch"]) & (df['Pclass'] == df.iloc[i]["Pclass"]))].median()
+        if not np.isnan(age_pred): 
+            df['Age'].iloc[i] = age_pred
+        else:
+            df['Age'].iloc[i] = age_med
 
 
-Outliers_to_drop = detect_outliers(datareader.df, 2, ["Age", "SibSp", "Parch", "Fare"])
+    #Fare
 
-# Cross validate model with Kfold stratified cross val
-kfold = StratifiedKFold(n_splits=10)
+    df["Fare"] = df["Fare"].fillna(df["Fare"].median())
 
-# Modeling step Test differents algorithms
-random_state = 2
-classifiers = []
-classifiers.append(SVC(random_state=random_state))
-classifiers.append(DecisionTreeClassifier(random_state=random_state))
-classifiers.append(AdaBoostClassifier(DecisionTreeClassifier(
-    random_state=random_state), random_state=random_state, learning_rate=0.1))
-classifiers.append(RandomForestClassifier(random_state=random_state))
-classifiers.append(ExtraTreesClassifier(random_state=random_state))
-classifiers.append(GradientBoostingClassifier(random_state=random_state))
-classifiers.append(MLPClassifier(random_state=random_state))
-classifiers.append(KNeighborsClassifier())
-classifiers.append(LogisticRegression(random_state=random_state))
-classifiers.append(LinearDiscriminantAnalysis())
 
-cv_results = []
-for classifier in classifiers:
-    cv_results.append(cross_val_score(classifier, X_train,
-                                      y=Y_train, scoring="accuracy", cv=kfold, n_jobs=4))
+    # Cabin
+    df["Cabin"] = pd.Series(
+        [i[0] if not pd.isnull(i) else 'X' for i in df['Cabin']])
 
-cv_means = []
-cv_std = []
-for cv_result in cv_results:
-    cv_means.append(cv_result.mean())
-    cv_std.append(cv_result.std())
+    # Ticket
+    Ticket = []
+    for i in list(df.Ticket):
+        if not i.isdigit():
+            Ticket.append(i.replace(".", "").replace(
+                "/", "").strip().split(' ')[0])  # Take prefix
+        else:
+            Ticket.append("X")
 
-cv_res = pd.DataFrame({"CrossValMeans": cv_means, "CrossValerrors": cv_std, "Algorithm": ["SVC", "DecisionTree", "AdaBoost",
-                                                                                          "RandomForest", "ExtraTrees", "GradientBoosting", "MultipleLayerPerceptron", "KNeighboors", "LogisticRegression", "LinearDiscriminantAnalysis"]})
+    df["Ticket"] = Ticket
 
-g = sns.barplot("CrossValMeans", "Algorithm", data=cv_res,
-                palette="Set3", orient="h", **{'xerr': cv_std})
-g.set_xlabel("Mean Accuracy")
-g = g.set_title("Cross validation scores")
+
+    # "Embarked"
+    df["Embarked"] = df["Embarked"].fillna("S")
+
+    # final check na status
+    u_data.checkNA(df)
+
+    #########################################################
+    # Feature enginnering
+    #########################################################
+
+    print("######################################")
+    print("start Feature enginnering process")
+    print("######################################")
+
+    #########################################################
+    # Encoding categorical data
+
+    # convert Sex into categorical value 0 for male and 1 for female
+    df["Sex"] = df["Sex"].map({"male": 0, "female": 1})
+
+
+    # Convert to categorical values Title
+
+    df_title = [i.split(",")[1].split(".")[0].strip()
+                for i in df["Name"]]
+    df["Title"] = pd.Series(df_title)
+
+    df["Title"] = df["Title"].replace(['Lady', 'the Countess', 'Countess', 'Capt',
+                                    'Col', 'Don', 'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer', 'Dona'], 'Rare')
+    df["Title"] = df["Title"].map(
+        {"Master": 0, "Miss": 1, "Ms": 1, "Mme": 1, "Mlle": 1, "Mrs": 1, "Mr": 2, "Rare": 3})
+    df["Title"] = df["Title"].astype(int)
+
+
+    # Create a family size descriptor from SibSp and Parch
+    df["Fsize"] = df["SibSp"] + df["Parch"] + 1
+
+
+    # convert to indicator values Title and Embarked
+    df = pd.get_dummies(df, columns=["Title"])
+    df = pd.get_dummies(df, columns=["Embarked"], prefix="Em")
+    df = pd.get_dummies(df, columns=["Ticket"], prefix="T")
+    df = pd.get_dummies(df, columns=["Cabin"])
+
+    #########################################################
+    #drop useless
+
+
+    # Drop useless variables
+    df.drop(["PassengerId"], axis=1, inplace=True)
+    df.drop(labels=["Name"], axis=1, inplace=True)
+
+
+    
+
+
+    #########################################################
+    #pass completed dataframe to other.py#
+    #########################################################
+
+    print("######################################")
+    print("Feature enginnering process was done")
+    print("######################################")
+
+    return df, train_len, IDtest
+    
+
+
+if __name__ == "__main__":
+    #test functions
+    featureEngineeringMain()
+
+
+# ref:https://www.kaggle.com/yassineghouzam/titanic-top-4-with-ensemble-modeling

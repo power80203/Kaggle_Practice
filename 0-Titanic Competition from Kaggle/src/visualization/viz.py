@@ -1,8 +1,41 @@
+#!/usr/bin/env python3
+
+
 import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import sys
+
+sys.path.append(os.path.abspath(".."))
+
+import config
+import data.datareader as datareader
+import visualization.barchart as barchart
+
+# import data from datareader
+df2, train, test = datareader.dataReaderMain()
+
+def vizMain():
+    df = df2
+
+    #########################################################
+    #EDA 1#
+    #########################################################
+
+    # check Age
+    # barchart.barchart_onevar(dataset= df, qc = False,var_x = "Age")
+    g = sns.heatmap(train[["Survived","SibSp","Parch","Age","Fare"]].corr(),annot=True, fmt = ".2f", cmap = "coolwarm")
+    plt.show()
+
+    #
+    
+
+
+
+
+
 
 
 def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
@@ -34,3 +67,6 @@ def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
 
     plt.legend(loc="best")
     return plt
+
+if __name__ == "__main__":
+    vizMain()

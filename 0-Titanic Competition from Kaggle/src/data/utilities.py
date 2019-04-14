@@ -22,7 +22,18 @@ def checkNA(df):
     # Fill empty and NaNs values with NaN
     df = df.fillna(np.nan)
     # Check for Null values
+    print("######################################")
+    print("printout status of na")
+    print("######################################")
     print(df.isnull().sum())
+    
+    print("######################################")
+    print("vars with missing value as below")
+    print("######################################")
+
+    for index, val in df.isnull().sum().iteritems():
+        if val > 0:
+            print(index, val)
 
 
 def detect_outliers(df, n, features):

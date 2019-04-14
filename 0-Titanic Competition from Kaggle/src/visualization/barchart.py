@@ -30,14 +30,14 @@ def barchart(dataset, var_x, var_y, topf=None, controlplotshow=True):
         plt.close()
 
 
-def barchart_onevar(dataset, var_x, y_title, controlplotshow=True):
-    df_new = dataset.query('%s > 0 ' % var_x)[
-        var_x].value_counts().sort_index()
+def barchart_onevar(dataset, var_x ,qc = False, y_title = "y", controlplotshow = True):
+    if qc:
+        df_new = dataset.query(qc)[var_x].value_counts().sort_index()
+    else:
+        df_new = dataset[var_x].value_counts().sort_index()
     df_new.plot(kind='bar', title='%s之%s' % (var_x, y_title), rot=0)
     plt.xlabel(var_x)
     plt.ylabel(y_title)
-    plt.savefig('%s%s之%s.png' % (abs_file_path, var_x, y_title),
-                bbox_inches='tight', pad_inches=0.5)
     if controlplotshow:
         plt.show()
     else:
