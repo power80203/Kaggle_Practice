@@ -34,8 +34,6 @@ import features.featureEngineering as FE
 
 test_model = False
 
-
-
 def trainModelDNNMain():
     dataset, train_len, IDtest = FE.featureEngineeringMain()
     train = dataset[:train_len] # 以前 是 train
@@ -53,9 +51,11 @@ def trainModelDNNMain():
 
     model = KerasClassifier(build_fn = create_model, verbose = 0 )
 
-    param_grid = dict(epochs=[10,20,30], batch_size = [8,16],
+    #########################################################
+    # set param_grid ,epochs, batch_size, activation
+    param_grid = dict(epochs=[30,50,100], batch_size = [8,16],
     activation = ['relu', 'tanh', 'softmax', 'linear', 'hard_sigmoid', 'softplus', 'selu'])
-
+    
     grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=1)
 
     grid_result = grid.fit(X_train, Y_train)
@@ -79,9 +79,47 @@ def create_model(activation='relu'):
     
     return model
 
+def trainModelDNNMain_final():
 
+    dataset, train_len, IDtest = FE.featureEngineeringMain()
+    train = dataset[:train_len] # 以前 是 train
+    test = dataset[train_len:] # 以後是 test
+    test.drop(labels=["Survived"],axis = 1,inplace=True)
 
+    #########################################################
+    # Separate train features and label 
+
+    train["Survived"] = train["Survived"].astype(int)
+
+    Y_train = train["Survived"]
+    X_train = train.drop(labels = ["Survived"],axis = 1)
+    
+    model = models.Sequential()
+    model.add(layers.Dense(60, activation = 'relu', input_shape=(60,)))
+    model.add(layers.Dense(120, activation = 'relu'))
+    model.add(layers.Dense(120, activation = 'relu'))
+    model.add(layers.Dense(60, activation = 'relu'))
+    model.add(layers.Dense(12, activation = 'relu'))
+    model.add(layers.Dense(1, activation='sigmoid'))
+
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+
+    model.fit(X_train, Y_train, batch_size = 8, epochs = 100)
+    
+    #########################################################
+    # export resut to csv
+    y_pred = model.predict_classes(test)
+
+    y_pred = np.reshape(y_pred,(len(y_pred),))
+ 
+    results = pd.DataFrame({'PassengerId':IDtest, 'Survived':y_pred})
+
+    #test_Survived = pd.Series(y_pred, name="Survived")
+    # results = pd.concat([IDtest,test_Survived],axis=1)
+
+    results.to_csv("Dnn_results.csv",index=False)    
 
 if __name__ == "__main__":
-    trainModelDNNMain()
+#     trainModelDNNMain()
+    trainModelDNNMain_final()
     pass

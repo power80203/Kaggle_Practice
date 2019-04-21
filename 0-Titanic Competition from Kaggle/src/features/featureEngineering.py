@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+from sklearn.preprocessing import StandardScaler
+
 
 sys.path.append(os.path.abspath(".."))
 
@@ -59,15 +61,21 @@ def featureEngineeringMain():
         else:
             df['Age'].iloc[i] = age_med
 
+    scaler = StandardScaler()
+
+    df['Age'] = scaler.fit_transform(df['Age'].values.reshape(-1,1))
+   
 
     #Fare
 
     df["Fare"] = df["Fare"].fillna(df["Fare"].median())
 
+    scaler = StandardScaler()
+
+    df["Fare"] = scaler.fit_transform(df["Fare"].values.reshape(-1,1))
 
     # Cabin
-    df["Cabin"] = pd.Series(
-        [i[0] if not pd.isnull(i) else 'X' for i in df['Cabin']])
+    df["Cabin"] = pd.Series([i[0] if not pd.isnull(i) else 'X' for i in df['Cabin']])
 
     # Ticket
     Ticket = []

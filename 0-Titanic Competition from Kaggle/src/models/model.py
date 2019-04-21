@@ -13,10 +13,12 @@ from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFo
 sys.path.append(os.path.abspath(".."))
 
 import data.datareader
+import features.featureEngineering as FE
 
 
-df, train_len = data.datareader.getData()
+df, train_len, IDtest = FE.featureEngineeringMain()
 
+# df, train, test,train_len, IDtest = data.datareader.dataReaderMain()
 
 train = df[:train_len]
 test = df[train_len:]
@@ -29,26 +31,41 @@ Y_train = train["Survived"]
 
 X_train = train.drop(labels=["Survived"], axis=1)
 
+print(df.columns)
+print(df.head())
 
-# Gradient boosting tunning
 
-GBC = GradientBoostingClassifier()
-gb_param_grid = {'loss': ["deviance"],
-                 'n_estimators': [100, 200, 300],
-                 'learning_rate': [0.1, 0.05, 0.01],
-                 'max_depth': [4, 8],
-                 'min_samples_leaf': [100, 150],
-                 'max_features': [0.3, 0.1]
-                 }
+def gradient_boosting():
+    # Gradient boosting tunning
 
-gsGBC = GridSearchCV(GBC, param_grid=gb_param_grid,
-                     scoring="accuracy", n_jobs=4, verbose=1)
+    GBC = GradientBoostingClassifier()
+    gb_param_grid = {'loss': ["deviance"],
+                    'n_estimators': [100, 200, 300],
+                    'learning_rate': [0.1, 0.05, 0.01],
+                    'max_depth': [4, 8],
+                    'min_samples_leaf': [100, 150],
+                    'max_features': [0.3, 0.1]
+                    }
 
-gsGBC.fit(X_train, Y_train)
+    gsGBC = GridSearchCV(GBC, param_grid=gb_param_grid,
+                        scoring="accuracy", n_jobs=4, verbose=0)
 
-GBC_best = gsGBC.best_estimator_
 
-# Best score
-test_Survived = pd.Series(gsGBC.predict(test), name="Survived")
+    grid_result = gsGBC.fit(X_train, Y_train)
 
-print(test_Survived)
+    GBC_best = gsGBC.best_estimator_
+
+    print('Best: {} using {}'.format(grid_result.best_score_, grid_result.best_params_))
+
+
+
+    # Best score
+    test_Survived = pd.Series(gsGBC.predict(test), name="Survived")
+
+    print(test_Survived)
+
+
+
+
+if __name__ == "__main__":
+    pass
