@@ -93,31 +93,50 @@ def trainModelDNNMain_final():
 
     Y_train = train["Survived"]
     X_train = train.drop(labels = ["Survived"],axis = 1)
+
+    # using test sets
+    from sklearn.model_selection import train_test_split
+
+    X_train, X_train_test, Y_train, y_train_test = train_test_split(
+    X_train, Y_train, test_size=0.25, random_state=42)
     
     model = models.Sequential()
     model.add(layers.Dense(60, activation = 'relu', input_shape=(60,)))
+    model.add(Dropout(0.4))
     model.add(layers.Dense(120, activation = 'relu'))
-    model.add(layers.Dense(120, activation = 'relu'))
+    model.add(Dropout(0.4))
     model.add(layers.Dense(60, activation = 'relu'))
+    model.add(Dropout(0.4))
     model.add(layers.Dense(12, activation = 'relu'))
+    model.add(Dropout(0.4))
     model.add(layers.Dense(1, activation='sigmoid'))
+    #########################################################
+    # optimize
+    sgd = optimizers.SGD(lr=0.01, clipvalue=0.5)
+    adam = optimizers.Adam(lr=0.0005, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.00005, amsgrad=False)
 
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
-    model.fit(X_train, Y_train, batch_size = 8, epochs = 100)
+
+    model.compile(optimizer= adam, loss='binary_crossentropy', metrics=['acc'])
+
+    model.fit(X_train, Y_train, batch_size = 8, epochs = 100,
+                   validation_data = (X_train_test, y_train_test))
     
+
     #########################################################
     # export resut to csv
-    y_pred = model.predict_classes(test)
 
-    y_pred = np.reshape(y_pred,(len(y_pred),))
+    if False:
+        y_pred = model.predict_classes(test)
+        
+        y_pred = np.reshape(y_pred,(len(y_pred),))
  
-    results = pd.DataFrame({'PassengerId':IDtest, 'Survived':y_pred})
+        results = pd.DataFrame({'PassengerId':IDtest, 'Survived':y_pred})
 
-    #test_Survived = pd.Series(y_pred, name="Survived")
-    # results = pd.concat([IDtest,test_Survived],axis=1)
+        #test_Survived = pd.Series(y_pred, name="Survived")
+        # results = pd.concat([IDtest,test_Survived],axis=1)
 
-    results.to_csv("Dnn_results.csv",index=False)    
+        results.to_csv("Dnn_results.csv",index=False)    
 
 if __name__ == "__main__":
 #     trainModelDNNMain()

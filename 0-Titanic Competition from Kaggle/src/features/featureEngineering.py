@@ -152,8 +152,11 @@ def featureEngineeringMain():
     print("######################################")
     print("Feature enginnering process was done")
     print("######################################")
+    
+    df.to_csv("test.csv")
 
     return df, train_len, IDtest
+    
     
 
 
